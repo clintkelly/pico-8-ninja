@@ -32,49 +32,47 @@ function table.sort (arr, comp)
   end
   return quicksort(arr, 1, #arr)
 end
+
 --------------------------------------------------------------------------------
 -- Collision-detection zone
 -- Most characters have some kind of collision-detection zone.
 -- For walls, it is a square, for other stuff it is a circle
 
-CollisionCircle = {}
+CollisionRect = {}
 
-function CollisionCircle:new(x, y, radius)
+function CollisionRect:new(x, y, w, h)
   assert(type(x) == "number")
   assert(type(y) == "number")
-  assert(type(radius) == "number")
+  assert(type(w) == "number")
+  assert(type(h) == "number")
   local c = {}
   c.x = x
   c.y = y
-  c.radius = radius
+  c.w = w
+  c.h = h
   setmetatable(c, self)
   self.__index = self
   return c
 end
 
 -- Check whether two circles intersect
-function CollisionCircle:intersects(other)
-  -- Get the distance between the two centers
-  local dx = self.x - other.x
-  local dy = self.y - other.y
-  local center_distance = sqrt(dx*dx + dy*dy)
-  -- printh("------")
-  -- printh(center_distance)
-  -- printh(other.radius+self.radius)
-  -- printh("------")
-  return other.radius + self.radius >= center_distance
+function CollisionRect:intersects(other)
+  return (self.x < other.x + other.w and
+     self.x + self.w > other.x and
+     self.y < other.y + other.h and
+     self.h + self.y > other.y)
 end
 
-function CollisionCircle:draw(color)
-  local mycolor = color or 5
+function CollisionRect:draw(color)
+  local mycolor = color or 7
   -- Uncomment to actually draw the collision circle
-  circ(self.x, self.y, self.radius, mycolor)
+  rect(self.x, self.y, self.x+self.w, self.y+self.h, color)
 end
 
-function CollisionCircle:new_moved_by(dx, dy)
+function CollisionRect:new_moved_by(dx, dy)
   assert(type(dx) == "number")
   assert(type(dy) == "number")
-  local c = CollisionCircle:new(self.x + dx, self.y + dy, self.radius)
+  local c = CollisionRect:new(self.x + dx, self.y + dy, self.w, self.h)
   return c
 end
 
@@ -84,16 +82,15 @@ function can_move_actor(a, dx, dy)
   assert(type(a) == "table")
   assert(type(dx) == "number")
   assert(type(dy) == "number")
-  local new_circle = a:get_collision_area():new_moved_by(dx, dy)
-  assert(type(new_circle) == "table")
-  assert(type(new_circle.x) == "number")
-  assert(type(new_circle.y) == "number")
-  assert(type(new_circle.radius) == "number")
+  local new_rect = a:get_collision_area():new_moved_by(dx, dy)
+  assert(type(new_rect) == "table")
+  assert(type(new_rect.x) == "number")
+  assert(type(new_rect.y) == "number")
 
   for i = 1,#actors do
     if actors[i] != a then
-      local other_circle = actors[i]:get_collision_area()
-      if new_circle:intersects(other_circle) then
+      local other_rect = actors[i]:get_collision_area()
+      if new_rect:intersects(other_rect) then
         return false
       end
     end
@@ -131,11 +128,7 @@ end
 function PlayerClass:get_collision_area()
   assert(type(self.x) == "number")
   assert(type(self.y) == "number")
-  local c = CollisionCircle:new(self.x, self.y+3, 1.5)
-  -- printh("Got new player collision circle")
-  -- printh(c.x)
-  -- printh(c.y)
-  -- printh(c.radius)
+  local c = CollisionRect:new(self.x-2, self.y+3, 4, 2)
   return c
 end
 
@@ -159,7 +152,7 @@ end
 function PlayerClass:draw()
   -- Adjust by 4 to get upper-left corner
   spr(self.sprite, self.x-4, self.y-4)
-  self:get_collision_area():draw(10)
+  --self:get_collision_area():draw(10)
 end
 
 --------------------------------------------------------------------------------
@@ -181,11 +174,12 @@ end
 
 function TreeClass:draw()
   spr(self.sprite, self.x-4, self.y-4)
-  self:get_collision_area():draw()
+  -- self:get_collision_area():draw()
 end
 
 function TreeClass:get_collision_area()
-  return CollisionCircle:new(self.x, self.y+3, 1.5)
+  local c = CollisionRect:new(self.x-2, self.y+3, 4, 2)
+  return c
 end
 
 --------------------------------------------------------------------------------
